@@ -2,7 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import numpy as np
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, jsonify, render_template, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 import cv2
 
@@ -69,17 +69,19 @@ def upload_image():
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    
     input_tensor, original_size = preprocess_image(filepath)
     with torch.no_grad():
         output_tensor = model(input_tensor)
 
-    
     colorized_image = postprocess_output(output_tensor, original_size)
     output_path = os.path.join(app.config['UPLOAD_FOLDER'], f"colorized_{filename}")
     cv2.imwrite(output_path, cv2.cvtColor(colorized_image, cv2.COLOR_RGB2BGR))
 
-    return send_file(output_path, mimetype='image/png')
+    return render_template('result.html', grayscale_image=filename, colorized_image=f"colorized_{filename}")
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
